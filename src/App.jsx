@@ -12,18 +12,30 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 const MainPage = () => {
   const [activeTab, setActiveTab] = useState('news');
   const [newsData, setNewsData] = useState([]);
+  const [membersData, setMembersData] = useState([]); // 멤버 데이터 상태 추가
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchNews = async () => {
-      const { data } = await supabase
+    const fetchData = async () => {
+      setLoading(true);
+      
+      // 1. 뉴스 가져오기
+      const { data: news } = await supabase
         .from('news')
         .select('*')
-        .order('id', { ascending: false });
-      if (data) setNewsData(data);
+        .order('date', { ascending: false }); // 날짜 최신순
+      if (news) setNewsData(news);
+
+      // 2. 멤버 가져오기 (새로 추가된 부분)
+      const { data: members } = await supabase
+        .from('members')
+        .select('*')
+        .order('id', { ascending: true });
+      if (members) setMembersData(members);
+      
       setLoading(false);
     };
-    fetchNews();
+    fetchData();
   }, []);
 
   return (
@@ -41,30 +53,43 @@ const MainPage = () => {
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-6 py-12">
-        <div className="mb-8 flex gap-4 border-b border-gray-200 pb-4">
-           <button onClick={() => setActiveTab('news')} className={`font-bold ${activeTab === 'news' ? 'text-blue-800' : 'text-gray-400'}`}>Research News</button>
-           <button onClick={() => setActiveTab('activities')} className={`font-bold ${activeTab === 'activities' ? 'text-blue-800' : 'text-gray-400'}`}>Activities</button>
+      {/* Hero Section */}
+      <section className="bg-white py-12 border-b border-gray-100 mb-8">
+        <div className="max-w-6xl mx-auto px-6">
+          <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
+            Leading the Future of <br className="hidden md:block" />
+            <span className="text-blue-800">Virtual Business Innovation</span>
+          </h2>
+          <p className="text-lg text-slate-600 max-w-2xl leading-relaxed">
+            서강대학교 BVI Lab은 메타버스, AI, 블록체인 등 가상 혁신 기술을 비즈니스 관점에서 연구합니다.
+          </p>
+        </div>
+      </section>
+
+      <main className="max-w-6xl mx-auto px-6 pb-20">
+        <div className="mb-8 flex gap-6 border-b border-gray-200">
+           <button onClick={() => setActiveTab('news')} className={`pb-3 font-bold text-lg border-b-2 transition-colors ${activeTab === 'news' ? 'text-blue-800 border-blue-800' : 'text-gray-400 border-transparent hover:text-gray-600'}`}>Research & Activities</button>
+           <button onClick={() => setActiveTab('members')} className={`pb-3 font-bold text-lg border-b-2 transition-colors ${activeTab === 'members' ? 'text-blue-800 border-blue-800' : 'text-gray-400 border-transparent hover:text-gray-600'}`}>People</button>
         </div>
 
+        {/* --- 뉴스 & 활동 탭 --- */}
         {activeTab === 'news' && (
           <div className="grid md:grid-cols-2 gap-6">
             {loading ? <p>Loading...</p> : newsData.map((news) => (
-              <div key={news.id} className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-                {/* 이미지가 있을 때만 표시 */}
+              <div key={news.id} className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow group">
                 {news.image_url && (
                   <div className="h-48 overflow-hidden bg-gray-100 border-b border-gray-100">
-                    <img src={news.image_url} alt={news.title} className="w-full h-full object-cover" />
+                    <img src={news.image_url} alt={news.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                   </div>
                 )}
                 <div className="p-6">
                   <div className="flex justify-between items-start mb-3">
-                    <span className="bg-blue-50 text-blue-700 text-xs font-semibold px-2.5 py-0.5 rounded border border-blue-100">
+                    <span className={`text-xs font-semibold px-2.5 py-0.5 rounded border ${news.category === 'Seminar' ? 'bg-purple-50 text-purple-700 border-purple-100' : 'bg-blue-50 text-blue-700 border-blue-100'}`}>
                       {news.category}
                     </span>
                     <span className="text-sm text-gray-400">{news.date}</span>
                   </div>
-                  <h4 className="text-lg font-bold text-slate-900 mb-2">{news.title}</h4>
+                  <h4 className="text-lg font-bold text-slate-900 mb-2 leading-snug">{news.title}</h4>
                   <p className="text-slate-600 text-sm mb-4 line-clamp-2">{news.description}</p>
                   <div className="text-sm text-slate-500 font-medium flex items-center gap-2">
                     <Users className="w-4 h-4" /> {news.author}
@@ -74,6 +99,31 @@ const MainPage = () => {
             ))}
           </div>
         )}
+
+        {/* --- 연구원(People) 탭 --- */}
+        {activeTab === 'members' && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+             {membersData.map((member) => (
+              <div key={member.id} className="bg-white p-5 rounded-lg border border-gray-200 text-center hover:border-blue-300 transition-colors">
+                <div className="w-16 h-16 bg-slate-100 rounded-full mx-auto mb-3 flex items-center justify-center text-slate-400 text-2xl">
+                  {/* 프로필 이미지가 있으면 보여주고 없으면 이모지 */}
+                  {member.image_url ? <img src={member.image_url} className="w-full h-full rounded-full object-cover"/> : '👤'}
+                </div>
+                <h5 className="font-bold text-slate-900 text-lg">{member.name}</h5>
+                <p className="text-xs text-blue-600 font-bold uppercase mb-1">{member.role} <span className="text-gray-300">|</span> {member.status}</p>
+                
+                <div className="mt-3 flex flex-wrap justify-center gap-1">
+                  {member.tags && member.tags.split(',').slice(0, 3).map((tag, i) => (
+                    <span key={i} className="text-[10px] bg-gray-100 text-gray-500 px-2 py-1 rounded-full">
+                      {tag.trim()}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
       </main>
     </div>
   );
